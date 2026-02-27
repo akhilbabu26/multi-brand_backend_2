@@ -52,21 +52,81 @@ func Signup(c *gin.Context){
 	if role == ""{
 		role = "user"
 	}
+	
+	otp := utils.GenerateOTP()
 
-	user := models.User{
+	// store temporary signup data
+	pendingUsers[body.Email] = PendingSignup{
 		Name:      body.Name,
 		Email:     body.Email,
 		Password:  string(hash),
 		Role:      role,
+		OTP:       otp,
+		ExpiresAt: time.Now().Add(
+			time.Minute * time.Duration(config.AppConfig.OTP.ExpiryMinutes),
+		),
+	}
+
+	// send OTP via email 
+	err = utils.SendOTPEmail(body.Email, otp)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to send otp email",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "OTP sent to email",
+	})
+}
+
+// verify otp
+func VerifyOTP(c *gin.Context) {
+	var body VerifyOTPDTO
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	pending, exists := pendingUsers[body.Email]
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no signup request"})
+		return
+	}
+
+	if time.Now().After(pending.ExpiresAt) {
+		delete(pendingUsers, body.Email)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "otp expired"})
+		return
+	}
+
+	if pending.OTP != body.OTP {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong otp"})
+		return
+	}
+
+	// create real user in DB
+	user := models.User{
+		Name:      pending.Name,
+		Email:     pending.Email,
+		Password:  pending.Password,
+		Role:      pending.Role,
 		IsBlocked: false,
 	}
 
-	if err := config.DB.Create(&user).Error; err != nil{
+	if err := config.DB.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
-    	return
+		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "signup success"})
+	// remove temp data
+	delete(pendingUsers, body.Email)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "signup completed",
+	})
 }
 
 //Login
@@ -164,3 +224,4 @@ func RefreshToken(c *gin.Context){
 
 	c.JSON(http.StatusOK, gin.H{"access_token": newAccessToken})
 }
+

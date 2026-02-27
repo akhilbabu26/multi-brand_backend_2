@@ -19,6 +19,7 @@ func main(){
 
 	config.AppConfig = cfg
 	config.ConnectDB(cfg)
+	
 
 	if err := config.DB.AutoMigrate(&models.User{}); err != nil {
 		log.Fatal("migration failed:", err)
@@ -29,6 +30,7 @@ func main(){
 	authRoute := r.Group("/auth")
 	{
 		authRoute.POST("/signup", auth.Signup)
+		authRoute.POST("/verify-otp", auth.VerifyOTP)
 		authRoute.POST("/login", auth.Login)
 		authRoute.POST("/refresh", auth.RefreshToken)
 	}

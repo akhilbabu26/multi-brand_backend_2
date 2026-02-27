@@ -21,9 +21,30 @@ type JWTConfig struct{
 	RefreshTTLHours  int  `yaml:"refresh_ttl_hours"`
 }
 
+type OTPConfig struct {
+	ExpiryMinutes int `yaml:"expiry_minutes"`
+}
+
+type SMTPConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Email    string `yaml:"email"`
+	Password string `yaml:"password"`
+}
+
+type RedisConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
+}
+
 type Config struct{
 	DB DBConfig `yaml:"db"` //DB = Struct value and stuct field (A variable is a named storage location that holds a value.)
 	JWT JWTConfig `yaml:"jwt"`
+	OTP  OTPConfig  `yaml:"otp"`
+	SMTP SMTPConfig `yaml:"smtp"`
+	Redis RedisConfig `yaml:"redis"`
 }
 
 var AppConfig *Config

@@ -16,3 +16,8 @@ type LoginDTO struct{
 type RefreshDTO struct{
 	RefreshToken string `json:"refresh_token"`
 }
+
+type VerifyOTPDTO struct {
+	Email string `json:"email"`
+	OTP   string `json:"otp"`
+}
