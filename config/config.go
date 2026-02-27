@@ -15,8 +15,10 @@ type DBConfig struct{
 }
 
 type JWTConfig struct{
-	AccessSceretKey string `yaml:"access_secret_key"`
-	RefreshSceretKey string `yaml:"refresh_secret_key"`
+	AccessSecretKey string `yaml:"access_secret_key"`
+	RefreshSecretKey string `yaml:"refresh_secret_key"`
+	AccessTTLMinutes int  `yaml:"access_ttl_minutes"`
+	RefreshTTLHours  int  `yaml:"refresh_ttl_hours"`
 }
 
 type Config struct{

@@ -5,5 +5,162 @@ import (
 	"strings"
 	"time"
 
-	
+	"github.com/akhilbabu26/multi-brand_backend_2/config"
+	"github.com/akhilbabu26/multi-brand_backend_2/internal/models"
+	"github.com/akhilbabu26/multi-brand_backend_2/utils"
+
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// signup
+func Signup(c *gin.Context){
+	var body SignupDTO
+
+	if err := c.ShouldBindJSON(&body); err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Input"})
+		return
+	}
+
+	if len(body.Password) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password too short"})
+		return
+	}
+
+	if body.Password != body.CPassword{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password mismatch"})
+		return
+	}
+
+	var existing models.User
+	err := config.DB.Where("email = ?", body.Email).First(&existing).Error // if the user email in our db the err == nil means uaer already exists.
+	if err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email already exists"})
+		return  // .Error = Give me the error result of this DB query and it stores in err.
+	}
+
+	hash, err := bcrypt.GenerateFromPassword(
+		[]byte(body.Password),
+		bcrypt.DefaultCost,
+	)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cant hash password"})
+		return
+	}
+
+	role := strings.ToLower(body.Role)
+	if role == ""{
+		role = "user"
+	}
+
+	user := models.User{
+		Name:      body.Name,
+		Email:     body.Email,
+		Password:  string(hash),
+		Role:      role,
+		IsBlocked: false,
+	}
+
+	if err := config.DB.Create(&user).Error; err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+    	return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "signup success"})
+}
+
+//Login
+func Login(c *gin.Context){
+	var body LoginDTO
+	var user models.User
+
+	if err := c.ShouldBindJSON(&body); err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	err := config.DB.Where("email = ?", body.Email).
+	First(&user).Error
+	if err != nil{
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not signup"})
+		return 
+	}
+
+	if user.IsBlocked {
+		c.JSON(http.StatusForbidden, gin.H{"error": "user blocked"})
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword(
+		[]byte(user.Password),
+		[]byte(body.Password),
+	)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "wrong password"})
+		return
+	}
+
+	access, err := utils.GenerateToken(
+		user.ID,
+		user.Role,
+		config.AppConfig.JWT.AccessSecretKey,
+		time.Minute*time.Duration(config.AppConfig.JWT.AccessTTLMinutes),
+	)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cant create access token"})
+		return
+	}
+
+	refresh, err := utils.GenerateToken(
+		user.ID,
+		user.Role,
+		config.AppConfig.JWT.RefreshSecretKey,
+		time.Hour*time.Duration(config.AppConfig.JWT.RefreshTTLHours),
+	)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cant create referesh token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token":  access,
+		"refresh_token": refresh,
+		"role":          user.Role,
+	})
+}
+
+// token validation
+func RefreshToken(c *gin.Context){
+	var body RefreshDTO
+
+	if err := c.ShouldBindJSON(&body); err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid refresh token"})
+		return
+	}
+
+	claims, err := utils.ValidateToken(
+		body.RefreshToken,
+		config.AppConfig.JWT.RefreshSecretKey,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh"})
+		return
+	}
+
+	newAccessToken, err := utils.GenerateToken(
+		claims.UserID,
+		claims.Role,
+		config.AppConfig.JWT.AccessSecretKey,
+		time.Minute*time.Duration(config.AppConfig.JWT.AccessTTLMinutes),
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "cant create access token",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"access_token": newAccessToken})
+}

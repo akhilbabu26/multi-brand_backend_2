@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"time"
@@ -12,7 +12,7 @@ type TokenClaims struct{
 }
 
 // access and referesh token generetor
-func GenerareToken(userID uint, role, sceretKey string, duration time.Duration)(string, error){
+func GenerateToken(userID uint, role, sceretKey string, duration time.Duration)(string, error){
 	claims := TokenClaims{
 		UserID: userID,
 		Role: role,
