@@ -1,10 +1,22 @@
 package utils
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand" // used to generate pseudo-random numbers
+	"math/big"
 )
 
+// GenerateOTP creates a secure 6-digit OTP
 func GenerateOTP() string {
-	return fmt.Sprintf("%06d", rand.Intn(1000000))// Generate a random integer from 0 to 999999 
+
+	// max = 1000000 (000000 → 999999)
+	max := big.NewInt(1000000)
+
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		// fallback (extremely rare)
+		return "000000"
+	}
+
+	return fmt.Sprintf("%06d", n.Int64())
 }
