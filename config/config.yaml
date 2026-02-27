@@ -1,0 +1,15 @@
+# Database connection configuration (It tells your Go app; Where the database is running, How to connect, Which database to use, Connection options)
+db:
+  host: localhost
+  user: postgres
+  password: 123
+  dbname: multibrand_database_2
+  port: 5432
+  sslmode: disable
+
+
+jwt:
+  access_secret_key: access_secret_key
+  refresh_secret_key: refresh_secret_key
+  access_ttl_minutes: 60
+  refresh_ttl_hours: 168
