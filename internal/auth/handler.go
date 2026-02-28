@@ -243,16 +243,10 @@ import (
 	"gorm.io/gorm"
 )
 
-//
-// ======================================================
+
 // AUTH HANDLERS
-// ======================================================
-//
 
-// ------------------------------------------------------
 // SIGNUP
-// ------------------------------------------------------
-
 func Signup(c *gin.Context) {
 	var body SignupDTO
 
@@ -294,7 +288,7 @@ func Signup(c *gin.Context) {
 	}
 
 	role := strings.ToLower(body.Role)
-	if role == "" {
+	if role != "user" {
 		role = "user"
 	}
 
@@ -327,12 +321,7 @@ func Signup(c *gin.Context) {
 	})
 }
 
-//
-// ------------------------------------------------------
 // VERIFY OTP
-// ------------------------------------------------------
-//
-
 func VerifyOTP(c *gin.Context) {
 	var body VerifyOTPDTO
 
@@ -387,12 +376,7 @@ func VerifyOTP(c *gin.Context) {
 	})
 }
 
-//
-// ------------------------------------------------------
 // LOGIN
-// ------------------------------------------------------
-//
-
 func Login(c *gin.Context) {
 	var body LoginDTO
 	var user models.User
@@ -423,19 +407,27 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	access, _ := utils.GenerateToken(
+	access, err := utils.GenerateToken(
 		user.ID,
 		user.Role,
 		config.AppConfig.JWT.AccessSecretKey,
 		time.Minute*time.Duration(config.AppConfig.JWT.AccessTTLMinutes),
 	)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cant create access token"})
+		return
+	}
 
-	refresh, _ := utils.GenerateToken(
+	refresh, err := utils.GenerateToken(
 		user.ID,
 		user.Role,
 		config.AppConfig.JWT.RefreshSecretKey,
 		time.Hour*time.Duration(config.AppConfig.JWT.RefreshTTLHours),
 	)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cant create referesh token"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token":  access,
@@ -444,12 +436,7 @@ func Login(c *gin.Context) {
 	})
 }
 
-//
-// ------------------------------------------------------
 // REFRESH TOKEN
-// ------------------------------------------------------
-//
-
 func RefreshToken(c *gin.Context) {
 	var body RefreshDTO
 
@@ -468,12 +455,125 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	newAccessToken, _ := utils.GenerateToken(
+	newAccessToken, err := utils.GenerateToken(
 		claims.UserID,
 		claims.Role,
 		config.AppConfig.JWT.AccessSecretKey,
 		time.Minute*time.Duration(config.AppConfig.JWT.AccessTTLMinutes),
 	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "cant create access token",
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"access_token": newAccessToken})
+}
+
+// FORGOT PASSWORD
+func ForgotPassword(c *gin.Context){
+	var body ForgotPasswordDOT
+
+	if err := c.ShouldBindJSON(&body); err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid Input"})
+		return
+	}
+
+	// check user exists
+	var user models.User
+	err := config.DB.Where("email = ?", body.Email).First(&user).Error
+	if err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user not found"})
+		return
+	}
+
+	// generate OTP
+	otp := utils.GenerateOTP()
+
+	// store reset OTP
+	resetMu.Lock()
+	resetOTPs[body.Email] = PendingReset{
+		Email: body.Email,
+		OTP: otp,
+		ExpiresAt: time.Now().Add(
+			time.Minute * time.Duration(config.AppConfig.OTP.ExpiryMinutes),
+		),
+	}
+	resetMu.Unlock()
+
+	// send email
+	if err := utils.SendOTPEmail(body.Email, otp); err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to send otp",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "password reset otp sent",
+	})
+}
+
+// RESET PASSWORD
+func ResetPassword(c *gin.Context){
+	var body ResetPasswordDOT
+
+	if err := c.ShouldBindJSON(&body); err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	// read OTP safely
+	resetMu.RLock() // Multiple goroutines to read at the same time and cannot modify data while readers are active
+	pending, exists := resetOTPs[body.Email]
+	resetMu.RUnlock()
+
+	if !exists{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no reset request"})
+		return
+	}
+
+	// check expiry
+	if time.Now().After(pending.ExpiresAt) {
+		resetMu.Lock()
+		delete(resetOTPs, body.Email)
+		resetMu.Unlock()
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": "otp expired"})
+		return
+	}
+
+	// verify otp
+	if pending.OTP != body.OTP{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid otp"})
+		return
+	}
+
+	// hash new password
+	hash, err := bcrypt.GenerateFromPassword(
+		[]byte(body.NewPassword),
+		bcrypt.DefaultCost,
+	)
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		return
+	}
+
+	// update db
+	err = config.DB.Model(&models.User{}).
+		Where("email = ?", body.Email).
+		Update("password", string(hash)).Error
+
+	if err != nil{
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update faild"})
+		return
+	}
+
+	// delete OTP after success
+	resetMu.Lock()
+	delete(resetOTPs, body.Email)
+	resetMu.Unlock()
+
+	c.JSON(http.StatusOK, gin.H{"message": "password reset successful"})
 }

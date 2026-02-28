@@ -73,12 +73,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//
-// ======================================================
-// DATABASE CONFIG
-// ======================================================
-//
 
+// DATABASE CONFIG
 type DBConfig struct {
 	Host     string `yaml:"host"`
 	User     string `yaml:"user"`
@@ -88,12 +84,8 @@ type DBConfig struct {
 	SSLMode  string `yaml:"sslmode"`
 }
 
-//
-// ======================================================
-// JWT CONFIG
-// ======================================================
-//
 
+// JWT CONFIG
 type JWTConfig struct {
 	AccessSecretKey  string `yaml:"access_secret_key"`
 	RefreshSecretKey string `yaml:"refresh_secret_key"`
@@ -101,22 +93,14 @@ type JWTConfig struct {
 	RefreshTTLHours  int    `yaml:"refresh_ttl_hours"`
 }
 
-//
-// ======================================================
-// OTP CONFIG
-// ======================================================
-//
 
+// OTP CONFIG
 type OTPConfig struct {
 	ExpiryMinutes int `yaml:"expiry_minutes"`
 }
 
-//
-// ======================================================
-// SMTP CONFIG
-// ======================================================
-//
 
+// SMTP CONFIG
 type SMTPConfig struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
@@ -124,12 +108,8 @@ type SMTPConfig struct {
 	Password string `yaml:"password"`
 }
 
-//
-// ======================================================
-// REDIS CONFIG
-// ======================================================
-//
 
+// REDIS CONFIG
 type RedisConfig struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
@@ -137,12 +117,8 @@ type RedisConfig struct {
 	DB       int    `yaml:"db"`
 }
 
-//
-// ======================================================
-// MAIN APP CONFIG
-// ======================================================
-//
 
+// MAIN APP CONFIG
 type Config struct {
 	DB    DBConfig    `yaml:"db"`
 	JWT   JWTConfig   `yaml:"jwt"`
@@ -154,12 +130,7 @@ type Config struct {
 // Global config instance
 var AppConfig *Config
 
-//
-// ======================================================
 // CONFIG LOADER
-// ======================================================
-//
-
 // LoadConfig reads YAML file and converts it into Config struct
 func LoadConfig(path string) (*Config, error) {
 

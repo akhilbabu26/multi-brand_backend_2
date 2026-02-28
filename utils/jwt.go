@@ -53,12 +53,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-//
-// ======================================================
 // JWT CLAIMS
-// ======================================================
-//
-
 // TokenClaims defines custom JWT payload fields.
 type TokenClaims struct {
 	UserID uint
@@ -66,12 +61,7 @@ type TokenClaims struct {
 	jwt.RegisteredClaims
 }
 
-//
-// ======================================================
 // TOKEN GENERATION
-// ======================================================
-//
-
 // GenerateToken creates a signed JWT token.
 func GenerateToken(
 	userID uint,
@@ -96,12 +86,7 @@ func GenerateToken(
 	return token.SignedString([]byte(secretKey))
 }
 
-//
-// ======================================================
 // TOKEN VALIDATION
-// ======================================================
-//
-
 // ValidateToken parses and validates JWT token.
 func ValidateToken(tokenStr, secretKey string) (*TokenClaims, error) {
 

@@ -37,21 +37,12 @@ import (
 	"gorm.io/gorm"
 )
 
-//
-// ======================================================
-// DATABASE INSTANCE (GLOBAL)
-// ======================================================
-//
 
+// DATABASE INSTANCE (GLOBAL)
 // DB is the global database connection used across the app
 var DB *gorm.DB
 
-//
-// ======================================================
 // DATABASE CONNECTION
-// ======================================================
-//
-
 // ConnectDB creates and initializes the database connection
 func ConnectDB(cfg *Config) {
 
