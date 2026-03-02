@@ -3,7 +3,9 @@ package routes
 import (
 
 	"github.com/akhilbabu26/multi-brand_backend_2/internal/auth"
-	"github.com/akhilbabu26/multi-brand_backend_2/middlewares/auth_middleware"
+	middleware "github.com/akhilbabu26/multi-brand_backend_2/internal/middlewares/auth_middleware"
+	admin "github.com/akhilbabu26/multi-brand_backend_2/internal/admin_side"
+	"github.com/akhilbabu26/multi-brand_backend_2/internal/products"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,6 +24,10 @@ func Setup() *gin.Engine {
 		authRoute.POST("/reset-password", auth.ResetPassword)
 	}
 
+	// PRODUCTS ROUTES (PUBLIC)
+	r.GET("/products", products.GetProducts)
+	r.GET("/products/:id", products.GetProductByID)
+
 	// USER ROUTES (LOGGED IN)
 	userRoute := r.Group("/user")
 	userRoute.Use(middleware.Authentication())
@@ -29,7 +35,6 @@ func Setup() *gin.Engine {
 		userRoute.GET("/profile", func(c *gin.Context){
 			c.JSON(200, gin.H{"welcome": "user"})
 		})
-		// userRoute.PUT("/profile", user.UpdateProfile)
 	}
 
 	// ADMIN ROUTES
@@ -39,6 +44,14 @@ func Setup() *gin.Engine {
 		adminRoute.GET("/dashboard", func(c *gin.Context){
 			c.JSON(200, gin.H{"welcome": "admin dash board"})
 		})
+
+		adminRoute.GET("/users", admin.GetAllUsers)
+		adminRoute.PUT("/users/:id", admin.UpdateUser)
+		adminRoute.PUT("/users/:id/block", admin.BlockUser)
+
+		adminRoute.POST("/products", products.CreateProduct)
+		adminRoute.PUT("/products/:id", products.UpdateProduct)
+		adminRoute.DELETE("/products/:id", products.DeleteProduct)
 	}
 
 	return r

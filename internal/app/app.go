@@ -22,7 +22,10 @@ func Init() {
 	config.ConnectDB(cfg)
 
 	// run migrations
-	if err := config.DB.AutoMigrate(&models.User{}); err != nil {
-		log.Fatal("migration failed:", err)
+	if err := config.DB.AutoMigrate(
+		&models.User{}, 
+		&models.Product{},
+		); err != nil {
+			log.Fatal("migration failed:", err)
 	}
 }

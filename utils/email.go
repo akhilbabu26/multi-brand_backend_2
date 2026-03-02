@@ -41,30 +41,16 @@ import (
 
 	"github.com/akhilbabu26/multi-brand_backend_2/config"
 )
-
-//
-// ======================================================
 // EMAIL UTILITIES
-// ======================================================
-//
 
 // SendOTPEmail sends OTP to the user's email address.
 func SendOTPEmail(toEmail, otp string) error {
 
-	//
-	// --------------------------------------------------
-	// LOAD SMTP CONFIG
-	// --------------------------------------------------
-	//
-
+ //LOAD SMTP CONFIG
 	cfg := config.AppConfig.SMTP
 
-	//
-	// --------------------------------------------------
-	// CREATE SMTP AUTH
-	// --------------------------------------------------
-	//
 
+// CREATE SMTP AUTH
 	auth := smtp.PlainAuth(
 		"",
 		cfg.Email,
@@ -72,31 +58,17 @@ func SendOTPEmail(toEmail, otp string) error {
 		cfg.Host,
 	)
 
-	//
-	// --------------------------------------------------
-	// BUILD EMAIL MESSAGE
-	// --------------------------------------------------
-	//
-
+// BUILD EMAIL MESSAGE
 	subject := "Subject: email verification OTP\r\n"
 	body := fmt.Sprintf("Your OTP is: %s", otp)
 
 	msg := []byte(subject + "\r\n" + body)
 
-	//
-	// --------------------------------------------------
-	// SMTP ADDRESS
-	// --------------------------------------------------
-	//
 
+// SMTP ADDRESS
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
-	//
-	// --------------------------------------------------
-	// SEND EMAIL
-	// --------------------------------------------------
-	//
-
+ //SEND EMAIL
 	return smtp.SendMail(
 		addr,
 		auth,
