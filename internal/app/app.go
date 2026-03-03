@@ -25,6 +25,7 @@ func Init() {
 	if err := config.DB.AutoMigrate(
 		&models.User{}, 
 		&models.Product{},
+		&models.Cart{},
 		); err != nil {
 			log.Fatal("migration failed:", err)
 	}

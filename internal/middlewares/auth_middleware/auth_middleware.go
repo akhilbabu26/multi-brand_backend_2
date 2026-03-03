@@ -64,7 +64,7 @@ func Authentication(allowedRoles ...string) gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("role", claims.Role)
 
-		// ROLE CHECK (OPTIONAL)
+		// ROLE CHECK
 
 		if len(allowedRoles) > 0 {
 
